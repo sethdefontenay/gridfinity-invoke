@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gridfinity-invoke"
+version = "0.1.0"
+description = "Invoke tasks for generating Gridfinity storage components"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Seth", email = "seth@example.com" }
+]
+dependencies = [
+    "invoke",
+    "colorama",
+    "cqgridfinity",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "pre-commit",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gridfinity_invoke"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/gridfinity_invoke --cov-report=term-missing -p no:xdist"
+markers = [
+    "serial: mark test to run serially (not in parallel)",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+disallow_untyped_defs = true
+mypy_path = "src"
+packages = ["gridfinity_invoke"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["invoke", "invoke.*", "colorama", "pytest"]
+ignore_missing_imports = true
