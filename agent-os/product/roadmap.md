@@ -12,9 +12,13 @@
 10. [ ] Divider/Insert Generation — Add invoke tasks for generating bin dividers, label holders, or other Gridfinity accessories `M`
 11. [ ] Configuration Profiles — Support named configuration profiles for frequently used bin sizes or project templates `S`
 12. [ ] Export Manifest — Generate a manifest file listing all STL files in a project with their parameters for easy reference `XS`
+13. [ ] Smart Baseplate Sizing — Allow users to provide physical dimensions (width and length in mm) of a space they want to fill; the tool calculates how many gridfinity units fit (1 unit = 42mm) and generates an appropriately sized baseplate `S`
+14. [ ] Baseplate Tabs Research — Investigate cqgridfinity API for adding mounting tabs around baseplate edges; document available options and implement if supported `XS`
 
 > Notes
 > - Order reflects technical dependencies: project structure first, then library integration, then features that build on that foundation
 > - Each item represents a complete, testable feature that adds value independently
 > - GitHub integration prioritized early to establish backup workflow from the start
 > - Batch and advanced features deferred until core single-item workflow is solid
+> - Smart Baseplate Sizing (item 13) extends baseplate generation with dimension-to-units conversion
+> - Baseplate Tabs (item 14) is a research/exploration item dependent on cqgridfinity capabilities

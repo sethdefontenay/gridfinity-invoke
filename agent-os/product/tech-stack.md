@@ -27,7 +27,9 @@
 
 ### Type Checking
 - **Type Hints:** Python type annotations throughout
-- **Type Checker:** [mypy](https://mypy.readthedocs.io/) (optional, for strict type validation)
+- **Type Checker:** [pyrefly](https://github.com/facebook/pyrefly) - Fast Python type checker written in Rust
+  - High performance type checking
+  - Configured via pyproject.toml
 
 ## Testing
 - **Test Framework:** [pytest](https://pytest.org/)
