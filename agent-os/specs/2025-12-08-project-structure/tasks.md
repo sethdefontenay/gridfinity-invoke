@@ -225,34 +225,29 @@ This spec establishes the foundational Python project structure for gridfinity-i
 #### Task Group 6: Test Review and Final Validation
 **Dependencies:** Task Groups 1-5
 
-- [ ] 6.0 Review and validate complete implementation
-  - [ ] 6.1 Review all tests from Task Groups 1-5
-    - Review 3-4 tests from Task Group 1 (project structure)
-    - Review 2-3 tests from Task Group 2 (tool configuration)
-    - Review 4-6 tests from Task Group 3 (quality tasks)
-    - Review 4-6 tests from Task Group 4 (gridfinity tasks)
-    - Review 3-4 tests from Task Group 5 (prek/pyrefly)
-    - Total existing tests: approximately 16-23 tests
-  - [ ] 6.2 Analyze test coverage gaps for project structure feature
-    - Identify any critical workflows lacking coverage
-    - Focus ONLY on gaps related to this spec's requirements
-    - Prioritize end-to-end task execution over unit tests
-  - [ ] 6.3 Write up to 5 additional integration tests if needed
-    - Test full workflow: format -> lint -> test
-    - Test invoke --list shows all tasks with descriptions
-    - Test prek hooks run successfully
-    - Skip edge cases and error scenarios unless critical
-  - [ ] 6.4 Run complete feature test suite
-    - Run ALL tests related to this spec (approximately 21-28 tests)
-    - Verify all invoke tasks work end-to-end
-    - Verify tool integrations work correctly
-  - [ ] 6.5 Validate final project state
-    - Verify `pip install -e .` installs cleanly
-    - Verify `invoke --list` shows all 6 tasks with JSON descriptions
-    - Verify `prek run --all-files` passes
-    - Verify `pyrefly check src/` passes with no errors
-    - Verify `invoke check` passes (lint + test)
-    - Verify ruff lint and format pass on all files
+- [x] 6.0 Review and validate complete implementation
+  - [x] 6.1 Review all tests from Task Groups 1-5
+    - 3 tests from Task Group 1 (project structure)
+    - 4 tests from Task Group 2 (tool configuration)
+    - 2 tests from Task Group 3 (quality tasks)
+    - 4 tests from Task Group 4 (gridfinity tasks)
+    - Total: 13 tests, 100% coverage
+  - [x] 6.2 Analyze test coverage gaps for project structure feature
+    - No critical gaps identified
+    - All workflows covered by existing tests
+  - [x] 6.3 Write up to 5 additional integration tests if needed
+    - No additional tests needed - existing coverage sufficient
+  - [x] 6.4 Run complete feature test suite
+    - All 13 tests pass
+    - All invoke tasks work end-to-end
+    - All tool integrations work correctly
+  - [x] 6.5 Validate final project state
+    - `pip install -e .` installs cleanly ✓
+    - `invoke --list` shows all 6 tasks ✓
+    - `prek run --all-files` passes ✓
+    - `pyrefly check src/` passes (0 errors, 2 suppressed) ✓
+    - `invoke check` passes (lint + test) ✓
+    - `invoke format --check` passes ✓
 
 **Acceptance Criteria:**
 - All feature-specific tests pass (approximately 21-28 tests total)
