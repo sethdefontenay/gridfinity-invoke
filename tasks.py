@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 
 from colorama import Fore, Style, init
 from invoke import task
@@ -24,6 +25,11 @@ def print_success(message: str) -> None:
 def print_error(message: str) -> None:
     """Print an error message."""
     print(f"{Fore.RED}{message}{Style.RESET_ALL}")
+
+
+def print_warning(message: str) -> None:
+    """Print a warning message."""
+    print(f"{Fore.YELLOW}{message}{Style.RESET_ALL}")
 
 
 def prompt_with_default(prompt: str, default: str) -> str:
@@ -305,6 +311,228 @@ def baseplate(
             sys.exit(1)
 
 
+@task(name="drawer-fit")
+def drawer_fit(
+    ctx: Context,
+    width: float,
+    depth: float,
+    output: str = "output/drawer-fit",
+) -> None:
+    """{"desc": "Generate a complete drawer-fit solution from drawer dimensions", "params": [{"name": "width", "type": "float", "desc": "Drawer width (X dimension) in millimeters", "example": "500"}, {"name": "depth", "type": "float", "desc": "Drawer depth (Y dimension) in millimeters", "example": "400"}, {"name": "output", "type": "string", "desc": "Output path prefix for STL files", "example": "output/drawer-fit"}], "returns": {}}"""  # noqa: E501
+    from gridfinity_invoke.generators import (
+        GRIDFINITY_UNIT_MM,
+        MAX_GRIDFINITY_UNITS_X,
+        MAX_GRIDFINITY_UNITS_Y,
+        MIN_SPACER_GAP_MM,
+        PRINT_BED_DEPTH_MM,
+        PRINT_BED_WIDTH_MM,
+        generate_drawer_fit,
+    )
+    from gridfinity_invoke.projects import (
+        add_component_to_config,
+        get_active_project,
+        get_project_path,
+    )
+
+    print_header(f"Generating drawer-fit solution for {width}x{depth}mm drawer...")
+
+    # Input validation - positive numbers
+    if width <= 0 or depth <= 0:
+        print_error("Dimensions must be positive numbers")
+        sys.exit(1)
+
+    # Input validation - minimum dimensions
+    if width < GRIDFINITY_UNIT_MM:
+        print_error(
+            f"Width must be at least {GRIDFINITY_UNIT_MM}mm to fit a 1-unit baseplate"
+        )
+        sys.exit(1)
+
+    if depth < GRIDFINITY_UNIT_MM:
+        print_error(
+            f"Depth must be at least {GRIDFINITY_UNIT_MM}mm to fit a 1-unit baseplate"
+        )
+        sys.exit(1)
+
+    # Calculate units for print bed warnings
+    units_width = int(width // GRIDFINITY_UNIT_MM)
+    units_depth = int(depth // GRIDFINITY_UNIT_MM)
+
+    # Print bed constraint warnings
+    if units_width > MAX_GRIDFINITY_UNITS_X or units_depth > MAX_GRIDFINITY_UNITS_Y:
+        actual_width_mm = units_width * GRIDFINITY_UNIT_MM
+        actual_depth_mm = units_depth * GRIDFINITY_UNIT_MM
+        print_warning(
+            f"Warning: Calculated baseplate ({units_width}x{units_depth} units = "
+            f"{actual_width_mm}x{actual_depth_mm}mm) exceeds print bed "
+            f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+        )
+
+        # Generate split suggestion for X
+        if units_width > MAX_GRIDFINITY_UNITS_X:
+            max_x = MAX_GRIDFINITY_UNITS_X
+            num_pieces_x = (units_width + max_x - 1) // max_x
+            piece_sizes_x = []
+            remaining = units_width
+            for _ in range(num_pieces_x):
+                piece = min(remaining, max_x)
+                piece_sizes_x.append(f"{piece}x{units_depth}")
+                remaining -= piece
+            pieces_str = " + ".join(piece_sizes_x)
+            print_warning(
+                f"   Suggestion: Split X into {num_pieces_x} baseplates: "
+                f"{pieces_str} units"
+            )
+
+        # Generate split suggestion for Y
+        if units_depth > MAX_GRIDFINITY_UNITS_Y:
+            max_y = MAX_GRIDFINITY_UNITS_Y
+            num_pieces_y = (units_depth + max_y - 1) // max_y
+            piece_sizes_y = []
+            remaining = units_depth
+            for _ in range(num_pieces_y):
+                piece = min(remaining, max_y)
+                piece_sizes_y.append(f"{units_width}x{piece}")
+                remaining -= piece
+            pieces_str = " + ".join(piece_sizes_y)
+            print_warning(
+                f"   Suggestion: Split Y into {num_pieces_y} baseplates: "
+                f"{pieces_str} units"
+            )
+
+        print()
+        print_warning("Proceeding with generation...")
+        print()
+
+    # Check for active project
+    active_project = get_active_project()
+
+    if active_project:
+        # Project-aware behavior: prompt for name and save to project
+        default_name = f"drawer-fit-{int(width)}x{int(depth)}mm"
+        component_name = prompt_with_default("Name", default_name)
+
+        # Save to project directory
+        project_path = get_project_path(active_project)
+        baseplate_path = project_path / f"{component_name}-baseplate.stl"
+        spacer_path = project_path / f"{component_name}-spacers.stl"
+
+        try:
+            result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+
+            # Display calculation summary
+            _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+            # Check spacer dimensions against print bed
+            if result.spacer_path:
+                if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                    print_warning(
+                        f"Warning: Spacer dimensions may exceed print bed "
+                        f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                    )
+                    print()
+
+            print_success(f"Generated baseplate: {result.baseplate_path}")
+            if result.spacer_path:
+                print_success(f"Generated spacers: {result.spacer_path}")
+            else:
+                print("No spacers generated (gaps below 4mm threshold)")
+
+            # Add component to config
+            component = {
+                "name": component_name,
+                "type": "drawer-fit",
+                "width_mm": width,
+                "depth_mm": depth,
+                "units_width": result.units_width,
+                "units_depth": result.units_depth,
+            }
+            add_component_to_config(active_project, component)
+            print_success(f"Added to project: {active_project}")
+
+        except ValueError as e:
+            print_error(f"Invalid dimensions: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print_error(f"Generation failed: {e}")
+            sys.exit(1)
+    else:
+        # Default behavior: save to output directory
+        output_path = Path(output)
+        baseplate_path = output_path.parent / f"{output_path.name}-baseplate.stl"
+        spacer_path = output_path.parent / f"{output_path.name}-spacers.stl"
+
+        try:
+            result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+
+            # Display calculation summary
+            _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+            # Check spacer dimensions against print bed
+            if result.spacer_path:
+                if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                    print_warning(
+                        f"Warning: Spacer dimensions may exceed print bed "
+                        f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                    )
+                    print()
+
+            print_success(f"Generated baseplate: {result.baseplate_path}")
+            if result.spacer_path:
+                print_success(f"Generated spacers: {result.spacer_path}")
+            else:
+                print("No spacers generated (gaps below 4mm threshold)")
+
+        except ValueError as e:
+            print_error(f"Invalid dimensions: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print_error(f"Generation failed: {e}")
+            sys.exit(1)
+
+
+def _display_drawer_fit_summary(
+    result: "DrawerFitResult",  # noqa: F821
+    width: float,
+    depth: float,
+    min_spacer_gap_mm: float,
+) -> None:
+    """Display calculation summary for drawer-fit generation.
+
+    Args:
+        result: The DrawerFitResult from generate_drawer_fit
+        width: Original drawer width in mm
+        depth: Original drawer depth in mm
+        min_spacer_gap_mm: Minimum gap threshold for spacer generation
+    """
+    print()
+    print(f"Drawer: {width} x {depth} mm")
+    print(f"Units: {result.units_width} x {result.units_depth}")
+    print(f"Baseplate: {result.actual_width_mm} x {result.actual_depth_mm} mm")
+    gap_x_per_side = result.gap_x_mm / 2
+    gap_y_per_side = result.gap_y_mm / 2
+    print(f"Gaps: X={gap_x_per_side}mm per side, Y={gap_y_per_side}mm per side")
+
+    # Display spacer information
+    per_side_gap_x = result.gap_x_mm / 2
+    per_side_gap_y = result.gap_y_mm / 2
+
+    spacers_to_generate = []
+    if per_side_gap_x > min_spacer_gap_mm and per_side_gap_y > min_spacer_gap_mm:
+        spacers_to_generate.extend(["corner", "front/back", "left/right"])
+    elif per_side_gap_x > min_spacer_gap_mm:
+        spacers_to_generate.append("left/right")
+    elif per_side_gap_y > min_spacer_gap_mm:
+        spacers_to_generate.append("front/back")
+
+    if spacers_to_generate:
+        print(f"Spacers: {', '.join(spacers_to_generate)}")
+    else:
+        print("Spacers: none needed (gaps too small)")
+
+    print()
+
+
 @task(name="new-project")
 def new_project(ctx: Context, name: str) -> None:
     """{"desc": "Create a new Gridfinity project", "params": [{"name": "name", "type": "string", "desc": "Project name", "example": "my-project"}], "returns": {}}"""  # noqa: E501
@@ -338,7 +566,11 @@ def new_project(ctx: Context, name: str) -> None:
 @task
 def load(ctx: Context, project: str) -> None:
     """{"desc": "Load a Gridfinity project and regenerate all STL files", "params": [{"name": "project", "type": "string", "desc": "Project name to load", "example": "my-project"}], "returns": {}}"""  # noqa: E501
-    from gridfinity_invoke.generators import generate_baseplate, generate_bin
+    from gridfinity_invoke.generators import (
+        generate_baseplate,
+        generate_bin,
+        generate_drawer_fit,
+    )
     from gridfinity_invoke.projects import (
         get_project_path,
         load_project_config,
@@ -368,19 +600,29 @@ def load(ctx: Context, project: str) -> None:
     for component in components:
         component_name = component["name"]
         component_type = component["type"]
-        output_path = project_path / f"{component_name}.stl"
 
         if component_type == "bin":
             length = component["length"]
             width = component["width"]
             height = component["height"]
+            output_path = project_path / f"{component_name}.stl"
             print(f"  Generating bin: {component_name} ({length}x{width}x{height})")
             generate_bin(length, width, height, output_path)
         elif component_type == "baseplate":
             length = component["length"]
             width = component["width"]
+            output_path = project_path / f"{component_name}.stl"
             print(f"  Generating baseplate: {component_name} ({length}x{width})")
             generate_baseplate(length, width, output_path)
+        elif component_type == "drawer-fit":
+            width_mm = component["width_mm"]
+            depth_mm = component["depth_mm"]
+            baseplate_path = project_path / f"{component_name}-baseplate.stl"
+            spacer_path = project_path / f"{component_name}-spacers.stl"
+            print(
+                f"  Generating drawer-fit: {component_name} ({width_mm}x{depth_mm}mm)"
+            )
+            generate_drawer_fit(width_mm, depth_mm, baseplate_path, spacer_path)
 
     # Set as active project
     set_active_project(project)
