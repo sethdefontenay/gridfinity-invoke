@@ -92,7 +92,8 @@ def test(ctx: Context, verbose: bool = False) -> None:
     }
     """
     print_header("Running tests with coverage...")
-    cmd = "pytest"
+    # Use sys.executable to ensure we use the same Python as invoke
+    cmd = f"{sys.executable} -m pytest"
     if verbose:
         cmd += " -v"
 
@@ -124,9 +125,114 @@ def check(ctx: Context) -> None:
 
     # Run tests only if lint passes
     print_header("Step 2/2: Running tests...")
-    test_result = ctx.run("pytest", warn=True)
+    test_result = ctx.run(f"{sys.executable} -m pytest", warn=True)
     if test_result is None or test_result.failed:
         print_error("Tests failed!")
         sys.exit(1)
 
     print_success("All quality checks passed!")
+
+
+@task
+def bin(
+    ctx: Context,
+    length: int = 2,
+    width: int = 2,
+    height: int = 3,
+    output: str = "output/bin.stl",
+) -> None:
+    """
+    {
+        "desc": "Generate a Gridfinity bin and export to STL",
+        "params": [
+            {
+                "name": "length",
+                "type": "int",
+                "desc": "Length in gridfinity units (1 unit = 42mm)",
+                "example": "2"
+            },
+            {
+                "name": "width",
+                "type": "int",
+                "desc": "Width in gridfinity units",
+                "example": "2"
+            },
+            {
+                "name": "height",
+                "type": "int",
+                "desc": "Height in gridfinity units (1 unit = 7mm)",
+                "example": "3"
+            },
+            {
+                "name": "output",
+                "type": "string",
+                "desc": "Output path for the STL file",
+                "example": "output/bin.stl"
+            }
+        ],
+        "returns": {}
+    }
+    """
+    from gridfinity_invoke.generators import generate_bin
+
+    print_header(f"Generating {length}x{width}x{height} Gridfinity bin...")
+
+    if length < 1 or width < 1 or height < 1:
+        print_error("All dimensions must be positive integers >= 1")
+        sys.exit(1)
+
+    try:
+        result_path = generate_bin(length, width, height, output)
+        print_success(f"Generated: {result_path}")
+    except Exception as e:
+        print_error(f"Generation failed: {e}")
+        sys.exit(1)
+
+
+@task
+def baseplate(
+    ctx: Context,
+    length: int = 4,
+    width: int = 4,
+    output: str = "output/baseplate.stl",
+) -> None:
+    """
+    {
+        "desc": "Generate a Gridfinity baseplate and export to STL",
+        "params": [
+            {
+                "name": "length",
+                "type": "int",
+                "desc": "Length in gridfinity units (1 unit = 42mm)",
+                "example": "4"
+            },
+            {
+                "name": "width",
+                "type": "int",
+                "desc": "Width in gridfinity units",
+                "example": "4"
+            },
+            {
+                "name": "output",
+                "type": "string",
+                "desc": "Output path for the STL file",
+                "example": "output/baseplate.stl"
+            }
+        ],
+        "returns": {}
+    }
+    """
+    from gridfinity_invoke.generators import generate_baseplate
+
+    print_header(f"Generating {length}x{width} Gridfinity baseplate...")
+
+    if length < 1 or width < 1:
+        print_error("All dimensions must be positive integers >= 1")
+        sys.exit(1)
+
+    try:
+        result_path = generate_baseplate(length, width, output)
+        print_success(f"Generated: {result_path}")
+    except Exception as e:
+        print_error(f"Generation failed: {e}")
+        sys.exit(1)

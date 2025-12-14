@@ -139,38 +139,38 @@ This spec establishes the foundational Python project structure for gridfinity-i
 #### Task Group 4: Bin and Baseplate Generation Tasks
 **Dependencies:** Task Group 3
 
-- [ ] 4.0 Complete gridfinity generation tasks
-  - [ ] 4.1 Write 4-6 focused tests for gridfinity generation
+- [x] 4.0 Complete gridfinity generation tasks
+  - [x] 4.1 Write 4-6 focused tests for gridfinity generation
     - Test `bin` task generates valid STL output for simple dimensions
     - Test `baseplate` task generates valid STL output for simple dimensions
     - Test output file is created at specified location
     - Test that invalid dimensions raise appropriate errors
-    - Skip exhaustive parameter combination testing
-  - [ ] 4.2 Create gridfinity generation module
+  - [x] 4.2 Create gridfinity generation module
     - Create `src/gridfinity_invoke/generators.py`
     - Import cq-gridfinity components
     - Implement `generate_bin(length, width, height, output_path)` function
     - Implement `generate_baseplate(length, width, output_path)` function
     - Add proper type hints for all functions
-  - [ ] 4.3 Implement `bin` task in tasks.py
+  - [x] 4.3 Implement `bin` task in tasks.py
     - Parameters: length, width, height (gridfinity units)
     - Optional output path parameter with sensible default
     - JSON docstring with all params documented (name, type, desc, example)
     - Call generator function and report success/failure
-  - [ ] 4.4 Implement `baseplate` task in tasks.py
+  - [x] 4.4 Implement `baseplate` task in tasks.py
     - Parameters: length, width (gridfinity units)
     - Optional output path parameter with sensible default
     - JSON docstring with all params documented
     - Call generator function and report success/failure
-  - [ ] 4.5 Add input validation for gridfinity tasks
+  - [x] 4.5 Add input validation for gridfinity tasks
     - Validate dimensions are positive integers
     - Provide clear error messages for invalid input
     - Ensure type hints are present for mypy compliance
-  - [ ] 4.6 Ensure gridfinity generation tests pass
+  - [x] 4.6 Ensure gridfinity generation tests pass
     - Run ONLY the 4-6 tests from 4.1
     - Verify `invoke bin --length=2 --width=2 --height=3` creates STL
     - Verify `invoke baseplate --length=4 --width=4` creates STL
     - Clean up generated test files
+  - Note: Requires Python 3.12 venv (.venv) due to cqgridfinity/OCP dependency
 
 **Acceptance Criteria:**
 - `invoke bin --length=2 --width=2 --height=3` generates valid STL file
