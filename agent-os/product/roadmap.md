@@ -3,7 +3,7 @@
 1. [ ] Project Structure Setup — Establish Python project layout with pyproject.toml, src directory structure, and invoke tasks.py foundation `S`
 2. [ ] Gridfinity Library Integration — Research and integrate a Python Gridfinity library (e.g., gridfinity-rebuilt or similar) with basic generation capability exposed via invoke task `M`
 3. [ ] Basic Bin Generation Task — Create invoke task to generate standard Gridfinity bins with configurable grid units (width x depth x height) and output STL files `S`
-4. [ ] Project Save/Load System — Implement project directory structure with JSON/YAML config files to save and reload Gridfinity design parameters `S`
+4. [x] Project Save/Load System — Implement project directory structure with JSON/YAML config files to save and reload Gridfinity design parameters `S`
 5. [ ] GitHub Integration — Add invoke tasks to initialize git repo, commit changes, and push projects to GitHub with meaningful commit messages `S`
 6. [ ] Baseplate Generation Task — Add invoke task to generate Gridfinity baseplates with configurable grid dimensions `S`
 7. [ ] Custom Task Template — Create a template/example for adding custom invoke tasks, with documentation on extending the tool `XS`
