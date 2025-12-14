@@ -33,7 +33,7 @@ def generate_bin(
 
     box = GridfinityBox(length, width, height)
     result = box.render()
-    result.val().exportStl(str(output_path))
+    result.val().exportStl(str(output_path))  # pyrefly: ignore[missing-attribute]
 
     return output_path
 
@@ -64,6 +64,6 @@ def generate_baseplate(
 
     baseplate = GridfinityBaseplate(length, width)
     result = baseplate.render()
-    result.val().exportStl(str(output_path))
+    result.val().exportStl(str(output_path))  # pyrefly: ignore[missing-attribute]
 
     return output_path

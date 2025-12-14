@@ -1,6 +1,7 @@
 """Tests for tool configuration validation."""
 
 import subprocess
+import sys
 
 
 def test_ruff_can_lint_source_directory() -> None:
@@ -31,6 +32,22 @@ def test_mypy_can_typecheck_source_directory() -> None:
     # Exit code 2 would indicate a configuration/fatal error
     assert result.returncode in (0, 1), (
         f"Mypy failed with config error (exit code {result.returncode}):\n"
+        f"stderr: {result.stderr}"
+    )
+
+
+def test_pyrefly_can_typecheck_source_directory() -> None:
+    """Test that pyrefly can type-check the source directory without config errors."""
+    result = subprocess.run(
+        [sys.executable, "-m", "pyrefly", "check", "src/"],
+        capture_output=True,
+        text=True,
+    )
+    # Exit code 0 means no type errors
+    # We want to verify pyrefly runs without config errors
+    assert result.returncode == 0, (
+        f"Pyrefly failed (exit code {result.returncode}):\n"
+        f"stdout: {result.stdout}\n"
         f"stderr: {result.stderr}"
     )
 

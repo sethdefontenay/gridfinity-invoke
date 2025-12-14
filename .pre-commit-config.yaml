@@ -6,10 +6,8 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.0
+  - repo: https://github.com/facebook/pyrefly-pre-commit
+    rev: 0.45.2
     hooks:
-      - id: mypy
-        additional_dependencies: []
-        args: [--config-file=pyproject.toml]
-        files: ^src/
+      - id: pyrefly-check
+        pass_filenames: false
