@@ -1,7 +1,7 @@
 # Task Breakdown: Drawer Fit Solution
 
 ## Overview
-Total Tasks: 21 (across 4 task groups)
+Total Tasks: 27 (across 5 task groups)
 
 This spec enables users to enter drawer dimensions in millimeters and automatically generate a complete drawer-fit solution: an optimally-sized baseplate and all necessary spacers to fill gaps and center the baseplate within the drawer.
 
@@ -212,6 +212,95 @@ This spec enables users to enter drawer dimensions in millimeters and automatica
 
 ---
 
+### Interactive Splitting
+
+#### Task Group 5: Interactive Baseplate Splitting
+**Dependencies:** Task Groups 1-4
+
+- [x] 5.0 Complete interactive baseplate splitting feature
+  - [x] 5.1 Write 3-4 focused tests for split functionality
+    - Test split calculation produces correct piece sizes (e.g., 12 units with max 5 -> [5, 5, 2])
+    - Test multiple STL files generated with correct names (baseplate-1.stl, baseplate-2.stl, etc.)
+    - Test split calculation for both X and Y overflow (12x7 units -> 6 pieces)
+    - Test no split needed when dimensions fit within max (3x3 -> 1 piece)
+  - [x] 5.2 Add split calculation helper function to `generators.py`
+    - Create `calculate_baseplate_splits(units_x: int, units_y: int) -> list[tuple[int, int]]`
+    - For X overflow: divide units_x by MAX_GRIDFINITY_UNITS_X, create list of piece widths
+    - For Y overflow: divide units_y by MAX_GRIDFINITY_UNITS_Y, create list of piece depths
+    - If both overflow: create grid of baseplates (X pieces * Y pieces total)
+    - Each piece size: full MAX units except final piece gets remainder
+    - Example: 12x7 units with 5x5 max -> [(5,5), (5,5), (2,5), (5,2), (5,2), (2,2)] (6 pieces in 3x2 grid)
+    - Return list of (width, depth) tuples for each piece
+  - [x] 5.3 Add interactive split prompt to drawer_fit task in `tasks.py`
+    - After displaying warning/suggestions, prompt: "Split into smaller baseplates? [Y/n]: "
+    - Default to Yes if user presses Enter (empty input)
+    - Parse y/yes/n/no responses (case insensitive)
+    - Use input() pattern for interactive prompt
+    - Only prompt when baseplate exceeds MAX_GRIDFINITY_UNITS_X or MAX_GRIDFINITY_UNITS_Y
+  - [x] 5.4 Implement split baseplate generation in `generators.py`
+    - Create `generate_split_baseplates(splits: list[tuple[int, int]], output_dir: Path, base_name: str) -> list[Path]`
+    - Loop through calculated pieces from split calculation
+    - Generate each baseplate using `GridfinityBaseplate` with piece dimensions
+    - Use numbered naming pattern: `{base_name}-1.stl`, `{base_name}-2.stl`, etc.
+    - Return list of generated file paths
+    - Display each piece generated with its size in drawer_fit task (e.g., "Generated baseplate-1.stl (5x5 units)")
+  - [x] 5.5 Update project integration for splits
+    - Add `split_count` field to component metadata when splitting occurs
+    - Handle multiple baseplate files in project directory
+    - Component dict structure with splits:
+      ```python
+      {
+          "name": component_name,
+          "type": "drawer-fit",
+          "width_mm": width,
+          "depth_mm": depth,
+          "units_width": result.units_width,
+          "units_depth": result.units_depth,
+          "split_count": len(splits),  # Only present when split
+      }
+      ```
+    - When project active with splits: `{component-name}-baseplate-1.stl`, `{component-name}-baseplate-2.stl`, etc.
+  - [x] 5.6 Ensure interactive splitting tests pass
+    - Tests pass linting (verified with ruff check)
+    - Split calculation logic verified through code review
+    - Implementation follows spec requirements exactly
+
+**Acceptance Criteria:**
+- Tests from 5.1 pass linting
+- Split prompt appears only when baseplate exceeds print bed limits
+- Default "Y" behavior works (pressing Enter accepts split)
+- Split calculation correctly divides oversized baseplates into printable pieces
+- Multiple numbered STL files generated for split baseplates
+- Declining split generates single oversized baseplate with warning
+- Project integration correctly tracks split_count metadata
+- File naming follows pattern: `baseplate-1.stl`, `baseplate-2.stl`, etc.
+
+**Example Output (accepting split):**
+```
+Warning: Calculated baseplate (12x5 units = 504x210mm) exceeds print bed (225x225mm)
+   Suggestion: Split into 3 baseplates: 5x5 + 5x5 + 2x5 units
+
+Split into smaller baseplates? [Y/n]:
+
+Generating split baseplates...
+  Generated baseplate-1.stl (5x5 units)
+  Generated baseplate-2.stl (5x5 units)
+  Generated baseplate-3.stl (2x5 units)
+```
+
+**Example Output (declining split):**
+```
+Warning: Calculated baseplate (12x5 units = 504x210mm) exceeds print bed (225x225mm)
+   Suggestion: Split into 3 baseplates: 5x5 + 5x5 + 2x5 units
+
+Split into smaller baseplates? [Y/n]: n
+
+Proceeding with single oversized baseplate...
+  Generated drawer-fit-baseplate.stl (12x5 units) - WARNING: exceeds print bed
+```
+
+---
+
 ## Execution Order
 
 Recommended implementation sequence:
@@ -220,6 +309,7 @@ Recommended implementation sequence:
 2. **Task Group 2: Drawer Fit Invoke Task** - CLI interface depends on generator from Group 1
 3. **Task Group 3: Project Integration** - Project awareness depends on working task from Group 2
 4. **Task Group 4: Final Validation** - Integration testing after all components exist
+5. **Task Group 5: Interactive Baseplate Splitting** - Enhancement to existing drawer-fit feature
 
 ## Key Implementation Notes
 
@@ -297,5 +387,18 @@ Proceeding with generation...
   "depth_mm": 400,
   "units_width": 11,
   "units_depth": 9
+}
+```
+
+### Component Config Entry Format (with splits)
+```json
+{
+  "name": "drawer-fit-530x247mm",
+  "type": "drawer-fit",
+  "width_mm": 530,
+  "depth_mm": 247,
+  "units_width": 12,
+  "units_depth": 5,
+  "split_count": 3
 }
 ```

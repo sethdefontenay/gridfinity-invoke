@@ -86,8 +86,10 @@ def test_drawer_fit_adds_component_to_config_with_type(
     new_project(ctx, name=project_name)
 
     # Run drawer-fit with active project
+    # Mock input() to decline split (500x400mm = 11x9 units exceeds 5x5 max)
     with patch("tasks.prompt_with_default", return_value="office-drawer"):
-        drawer_fit(ctx, width=500.0, depth=400.0)
+        with patch("builtins.input", return_value="n"):
+            drawer_fit(ctx, width=500.0, depth=400.0)
 
     # Verify component was added to config
     config = projects.load_project_config(project_name)

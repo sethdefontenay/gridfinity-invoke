@@ -8,6 +8,7 @@ Generate a complete drawer-fit solution from drawer dimensions (width and depth 
 1. Calculate how many gridfinity units fit in each direction
 2. Generate an appropriately sized baseplate
 3. Generate all necessary drawer spacers (corner, front/back, left/right) to fill gaps and center the baseplate
+4. Prompt to split oversized baseplates into printable pieces
 
 This expanded scope leverages cqgridfinity's `GridfinityDrawerSpacer` class which handles all calculations and spacer generation automatically.
 
@@ -82,7 +83,7 @@ N/A
   - Gap dimensions on each side (mm)
   - Which spacers will be generated (based on 4mm minimum gap threshold)
 - Generate multiple STL files:
-  - Baseplate STL
+  - Baseplate STL (or multiple numbered baseplates if split)
   - Spacer half-set STL (user prints twice for complete set)
 - Display spacer information (which spacers needed: corner, front/back, left/right)
 - Integrate with project save/load system when a project is active
@@ -109,30 +110,70 @@ MAX_GRIDFINITY_UNITS_Y = PRINT_BED_DEPTH_MM // 42  # 5 units for 225mm bed
 - No full config file system needed
 - Derived max unit values calculated automatically from bed size
 
-**Baseplate Handling:**
+### Baseplate Handling (Oversized)
+
+**Warning Display:**
 - If calculated baseplate exceeds max units in either dimension, display a warning
-- Suggest how to split the baseplate into multiple pieces (e.g., "10x8 baseplate could be split into 2x 5x8 baseplates")
-- Still generate the calculated size but warn that it won't fit on the print bed
-- Let user decide whether to proceed or manually adjust
+- Suggest how to split the baseplate into multiple pieces
+
+**Interactive Splitting:**
+- After warning, prompt user: "Split into smaller baseplates? [Y/n]: "
+- Default is Yes (pressing Enter accepts split)
+- If user accepts: generate multiple numbered baseplate STL files
+- If user declines: generate single oversized baseplate with warning
+
+**Split Calculation Algorithm:**
+- For X overflow: divide by MAX_GRIDFINITY_UNITS_X, create piece list
+- For Y overflow: divide by MAX_GRIDFINITY_UNITS_Y, create piece list
+- If both overflow: create grid of baseplates (X pieces * Y pieces)
+- Each piece gets MAX units except final piece gets remainder
+
+**Example - 530x247mm drawer (12x5 units) with 5x5 max:**
+- X needs split: 12 -> [5, 5, 2] (3 pieces)
+- Y fits: 5 -> [5] (1 piece)
+- Result: 3 baseplates total: 5x5, 5x5, 2x5 units
+- Files: baseplate-1.stl (5x5), baseplate-2.stl (5x5), baseplate-3.stl (2x5)
+
+**Example - 420x420mm drawer (10x10 units) with 5x5 max:**
+- X needs split: 10 -> [5, 5] (2 pieces)
+- Y needs split: 10 -> [5, 5] (2 pieces)
+- Result: 4 baseplates total (2x2 grid): 5x5, 5x5, 5x5, 5x5 units
+- Files: baseplate-1.stl through baseplate-4.stl (all 5x5)
+
+**Output Example (with splitting):**
+```
+Warning: Calculated baseplate (12x5 units = 504x210mm) exceeds print bed (225x225mm)
+   Suggestion: Split into 3 baseplates: 5x5 + 5x5 + 2x5 units
+
+Split into smaller baseplates? [Y/n]:
+
+Generating split baseplates...
+  Generated baseplate-1.stl (5x5 units)
+  Generated baseplate-2.stl (5x5 units)
+  Generated baseplate-3.stl (2x5 units)
+```
+
+**Output Example (declining split):**
+```
+Warning: Calculated baseplate (12x5 units = 504x210mm) exceeds print bed (225x225mm)
+   Suggestion: Split into 3 baseplates: 5x5 + 5x5 + 2x5 units
+
+Split into smaller baseplates? [Y/n]: n
+
+Proceeding with single oversized baseplate...
+  Generated drawer-fit-baseplate.stl (12x5 units) - WARNING: exceeds print bed
+```
 
 **Spacer Handling:**
 - Spacers should also respect the configured print bed limits
 - If any spacer piece exceeds the limit, warn and suggest alternatives
-
-**Output Example:**
-```
-Warning: Calculated baseplate (7x6 units = 294x252mm) exceeds print bed (225x225mm)
-   Suggestion: Split into 2 baseplates: 4x6 + 3x6 units
-
-Proceeding with generation... (will need to be split manually or re-run with smaller dimensions)
-```
 
 ### Reusability Opportunities
 - Reuse existing `baseplate` task pattern from `tasks.py`
 - Reuse project integration functions: `get_active_project`, `get_project_path`, `add_component_to_config`, `set_active_project`
 - Reuse colored output helpers: `print_header`, `print_success`, `print_error`
 - Add new `print_warning` helper for print bed warnings
-- Reuse `prompt_with_default` for component naming
+- Reuse `prompt_with_default` for component naming and split confirmation
 - Leverage cqgridfinity's `GridfinityDrawerSpacer` for all calculations and spacer geometry
 
 ### Scope Boundaries
@@ -148,6 +189,8 @@ Proceeding with generation... (will need to be split manually or re-run with sma
 - Project integration (same behavior as existing baseplate task)
 - Print bed size warnings with split suggestions
 - Configurable print bed size via module-level constants
+- Interactive prompt-based baseplate splitting when oversized
+- Multiple numbered baseplate STL generation for split baseplates
 
 **Out of Scope:**
 - Modifying the existing `baseplate` task
@@ -155,7 +198,6 @@ Proceeding with generation... (will need to be split manually or re-run with sma
 - Full spacer set output (only half-set for print optimization)
 - Custom spacer configurations (auto-generation only)
 - Manual override of which spacers to include
-- Automatic baseplate splitting (only warns and suggests)
 - Full config file system for print bed size (simple module constants only)
 
 ### Technical Considerations
@@ -169,6 +211,7 @@ Proceeding with generation... (will need to be split manually or re-run with sma
 - Task naming convention should follow existing patterns (hyphenated task names)
 - JSON docstring format for task help (matching existing tasks)
 - Follow existing error handling patterns (print_error + sys.exit(1))
-- Output file naming: suggest pattern like `drawer-fit-baseplate.stl`, `drawer-fit-spacers.stl`
+- Output file naming: `drawer-fit-baseplate.stl` (single) or `baseplate-1.stl`, `baseplate-2.stl`, etc. (split)
 - Print bed size configurable via module constants in `generators.py`
 - Max gridfinity units calculated from print bed size: `bed_size // 42`
+- Split prompt uses "Y" as default (Enter accepts split)

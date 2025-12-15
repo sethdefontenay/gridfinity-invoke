@@ -326,13 +326,19 @@ def drawer_fit(
         MIN_SPACER_GAP_MM,
         PRINT_BED_DEPTH_MM,
         PRINT_BED_WIDTH_MM,
+        calculate_baseplate_splits,
         generate_drawer_fit,
+        generate_split_baseplates,
     )
     from gridfinity_invoke.projects import (
         add_component_to_config,
         get_active_project,
         get_project_path,
     )
+
+    # Convert string arguments to float (invoke passes CLI args as strings)
+    width = float(width)
+    depth = float(depth)
 
     print_header(f"Generating drawer-fit solution for {width}x{depth}mm drawer...")
 
@@ -358,8 +364,14 @@ def drawer_fit(
     units_width = int(width // GRIDFINITY_UNIT_MM)
     units_depth = int(depth // GRIDFINITY_UNIT_MM)
 
-    # Print bed constraint warnings
-    if units_width > MAX_GRIDFINITY_UNITS_X or units_depth > MAX_GRIDFINITY_UNITS_Y:
+    # Check if splitting is needed
+    needs_split = (
+        units_width > MAX_GRIDFINITY_UNITS_X or units_depth > MAX_GRIDFINITY_UNITS_Y
+    )
+    should_split = False
+
+    # Print bed constraint warnings and interactive splitting prompt
+    if needs_split:
         actual_width_mm = units_width * GRIDFINITY_UNIT_MM
         actual_depth_mm = units_depth * GRIDFINITY_UNIT_MM
         print_warning(
@@ -368,40 +380,22 @@ def drawer_fit(
             f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
         )
 
-        # Generate split suggestion for X
-        if units_width > MAX_GRIDFINITY_UNITS_X:
-            max_x = MAX_GRIDFINITY_UNITS_X
-            num_pieces_x = (units_width + max_x - 1) // max_x
-            piece_sizes_x = []
-            remaining = units_width
-            for _ in range(num_pieces_x):
-                piece = min(remaining, max_x)
-                piece_sizes_x.append(f"{piece}x{units_depth}")
-                remaining -= piece
-            pieces_str = " + ".join(piece_sizes_x)
-            print_warning(
-                f"   Suggestion: Split X into {num_pieces_x} baseplates: "
-                f"{pieces_str} units"
-            )
-
-        # Generate split suggestion for Y
-        if units_depth > MAX_GRIDFINITY_UNITS_Y:
-            max_y = MAX_GRIDFINITY_UNITS_Y
-            num_pieces_y = (units_depth + max_y - 1) // max_y
-            piece_sizes_y = []
-            remaining = units_depth
-            for _ in range(num_pieces_y):
-                piece = min(remaining, max_y)
-                piece_sizes_y.append(f"{units_width}x{piece}")
-                remaining -= piece
-            pieces_str = " + ".join(piece_sizes_y)
-            print_warning(
-                f"   Suggestion: Split Y into {num_pieces_y} baseplates: "
-                f"{pieces_str} units"
-            )
+        # Calculate and display split suggestion
+        splits = calculate_baseplate_splits(units_width, units_depth)
+        split_summary = []
+        for split_width, split_depth in splits:
+            split_summary.append(f"{split_width}x{split_depth}")
+        pieces_str = " + ".join(split_summary)
+        print_warning(
+            f"   Suggestion: Split into {len(splits)} baseplates: {pieces_str} units"
+        )
 
         print()
-        print_warning("Proceeding with generation...")
+
+        # Interactive prompt for splitting (default to Yes)
+        response = input("Split into smaller baseplates? [Y/n]: ").strip().lower()
+        should_split = response in ("", "y", "yes")
+
         print()
 
     # Check for active project
@@ -414,41 +408,141 @@ def drawer_fit(
 
         # Save to project directory
         project_path = get_project_path(active_project)
-        baseplate_path = project_path / f"{component_name}-baseplate.stl"
-        spacer_path = project_path / f"{component_name}-spacers.stl"
 
         try:
-            result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+            if should_split:
+                # Generate split baseplates
+                print_header("Generating split baseplates...")
+                splits = calculate_baseplate_splits(units_width, units_depth)
+                baseplate_paths = generate_split_baseplates(
+                    splits, project_path, f"{component_name}-baseplate"
+                )
 
-            # Display calculation summary
-            _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
-
-            # Check spacer dimensions against print bed
-            if result.spacer_path:
-                if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
-                    print_warning(
-                        f"Warning: Spacer dimensions may exceed print bed "
-                        f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                # Display generated pieces
+                for i, (path, (split_w, split_d)) in enumerate(
+                    zip(baseplate_paths, splits), start=1
+                ):
+                    print_success(
+                        f"  Generated {path.name} ({split_w}x{split_d} units)"
                     )
+
+                # Generate spacers for full drawer dimensions
+                spacer_path = project_path / f"{component_name}-spacers.stl"
+                from gridfinity_invoke.generators import DrawerFitResult
+
+                # Calculate gaps for spacer generation
+                actual_width_mm = float(units_width * GRIDFINITY_UNIT_MM)
+                actual_depth_mm = float(units_depth * GRIDFINITY_UNIT_MM)
+                gap_x_mm = width - actual_width_mm
+                gap_y_mm = depth - actual_depth_mm
+                per_side_gap_x = gap_x_mm / 2
+                per_side_gap_y = gap_y_mm / 2
+
+                spacer_result_path = None
+                if (
+                    per_side_gap_x > MIN_SPACER_GAP_MM
+                    or per_side_gap_y > MIN_SPACER_GAP_MM
+                ):
+                    from cqgridfinity import GridfinityDrawerSpacer
+
+                    spacer_path.parent.mkdir(parents=True, exist_ok=True)
+                    spacer = GridfinityDrawerSpacer(dr_width=width, dr_depth=depth)
+                    spacer_obj = spacer.render_half_set()
+                    if spacer_obj is not None:
+                        spacer_obj.val().exportStl(
+                            str(spacer_path)
+                        )  # pyrefly: ignore[missing-attribute]
+                        spacer_result_path = spacer_path
+
+                # Create result object for display
+                result = DrawerFitResult(
+                    baseplate_path=baseplate_paths[0],  # First piece for compatibility
+                    spacer_path=spacer_result_path,
+                    units_width=units_width,
+                    units_depth=units_depth,
+                    actual_width_mm=actual_width_mm,
+                    actual_depth_mm=actual_depth_mm,
+                    gap_x_mm=gap_x_mm,
+                    gap_y_mm=gap_y_mm,
+                )
+
+                # Display calculation summary
+                _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+                # Check spacer dimensions against print bed
+                if result.spacer_path:
+                    if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                        print_warning(
+                            f"Warning: Spacer dimensions may exceed print bed "
+                            f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                        )
+                        print()
+
+                if result.spacer_path:
+                    print_success(f"Generated spacers: {result.spacer_path}")
+                else:
+                    print("No spacers generated (gaps below 4mm threshold)")
+
+                # Add component to config with split_count
+                component = {
+                    "name": component_name,
+                    "type": "drawer-fit",
+                    "width_mm": width,
+                    "depth_mm": depth,
+                    "units_width": result.units_width,
+                    "units_depth": result.units_depth,
+                    "split_count": len(splits),
+                }
+                add_component_to_config(active_project, component)
+                print_success(f"Added to project: {active_project}")
+
+            else:
+                # Generate single baseplate (original behavior)
+                if needs_split:
+                    print_warning("Proceeding with single oversized baseplate...")
                     print()
 
-            print_success(f"Generated baseplate: {result.baseplate_path}")
-            if result.spacer_path:
-                print_success(f"Generated spacers: {result.spacer_path}")
-            else:
-                print("No spacers generated (gaps below 4mm threshold)")
+                baseplate_path = project_path / f"{component_name}-baseplate.stl"
+                spacer_path = project_path / f"{component_name}-spacers.stl"
 
-            # Add component to config
-            component = {
-                "name": component_name,
-                "type": "drawer-fit",
-                "width_mm": width,
-                "depth_mm": depth,
-                "units_width": result.units_width,
-                "units_depth": result.units_depth,
-            }
-            add_component_to_config(active_project, component)
-            print_success(f"Added to project: {active_project}")
+                result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+
+                # Display calculation summary
+                _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+                # Check spacer dimensions against print bed
+                if result.spacer_path:
+                    if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                        print_warning(
+                            f"Warning: Spacer dimensions may exceed print bed "
+                            f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                        )
+                        print()
+
+                if needs_split:
+                    print_success(
+                        f"Generated baseplate: {result.baseplate_path} "
+                        f"(WARNING: exceeds print bed)"
+                    )
+                else:
+                    print_success(f"Generated baseplate: {result.baseplate_path}")
+
+                if result.spacer_path:
+                    print_success(f"Generated spacers: {result.spacer_path}")
+                else:
+                    print("No spacers generated (gaps below 4mm threshold)")
+
+                # Add component to config
+                component = {
+                    "name": component_name,
+                    "type": "drawer-fit",
+                    "width_mm": width,
+                    "depth_mm": depth,
+                    "units_width": result.units_width,
+                    "units_depth": result.units_depth,
+                }
+                add_component_to_config(active_project, component)
+                print_success(f"Added to project: {active_project}")
 
         except ValueError as e:
             print_error(f"Invalid dimensions: {e}")
@@ -459,29 +553,118 @@ def drawer_fit(
     else:
         # Default behavior: save to output directory
         output_path = Path(output)
-        baseplate_path = output_path.parent / f"{output_path.name}-baseplate.stl"
-        spacer_path = output_path.parent / f"{output_path.name}-spacers.stl"
 
         try:
-            result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+            if should_split:
+                # Generate split baseplates
+                print_header("Generating split baseplates...")
+                splits = calculate_baseplate_splits(units_width, units_depth)
+                baseplate_paths = generate_split_baseplates(
+                    splits, output_path.parent, "baseplate"
+                )
 
-            # Display calculation summary
-            _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
-
-            # Check spacer dimensions against print bed
-            if result.spacer_path:
-                if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
-                    print_warning(
-                        f"Warning: Spacer dimensions may exceed print bed "
-                        f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                # Display generated pieces
+                for i, (path, (split_w, split_d)) in enumerate(
+                    zip(baseplate_paths, splits), start=1
+                ):
+                    print_success(
+                        f"  Generated {path.name} ({split_w}x{split_d} units)"
                     )
+
+                # Generate spacers
+                spacer_path = output_path.parent / f"{output_path.name}-spacers.stl"
+                from gridfinity_invoke.generators import DrawerFitResult
+
+                # Calculate gaps for spacer generation
+                actual_width_mm = float(units_width * GRIDFINITY_UNIT_MM)
+                actual_depth_mm = float(units_depth * GRIDFINITY_UNIT_MM)
+                gap_x_mm = width - actual_width_mm
+                gap_y_mm = depth - actual_depth_mm
+                per_side_gap_x = gap_x_mm / 2
+                per_side_gap_y = gap_y_mm / 2
+
+                spacer_result_path = None
+                if (
+                    per_side_gap_x > MIN_SPACER_GAP_MM
+                    or per_side_gap_y > MIN_SPACER_GAP_MM
+                ):
+                    from cqgridfinity import GridfinityDrawerSpacer
+
+                    spacer_path.parent.mkdir(parents=True, exist_ok=True)
+                    spacer = GridfinityDrawerSpacer(dr_width=width, dr_depth=depth)
+                    spacer_obj = spacer.render_half_set()
+                    if spacer_obj is not None:
+                        spacer_obj.val().exportStl(
+                            str(spacer_path)
+                        )  # pyrefly: ignore[missing-attribute]
+                        spacer_result_path = spacer_path
+
+                # Create result object for display
+                result = DrawerFitResult(
+                    baseplate_path=baseplate_paths[0],
+                    spacer_path=spacer_result_path,
+                    units_width=units_width,
+                    units_depth=units_depth,
+                    actual_width_mm=actual_width_mm,
+                    actual_depth_mm=actual_depth_mm,
+                    gap_x_mm=gap_x_mm,
+                    gap_y_mm=gap_y_mm,
+                )
+
+                # Display calculation summary
+                _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+                # Check spacer dimensions against print bed
+                if result.spacer_path:
+                    if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                        print_warning(
+                            f"Warning: Spacer dimensions may exceed print bed "
+                            f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                        )
+                        print()
+
+                if result.spacer_path:
+                    print_success(f"Generated spacers: {result.spacer_path}")
+                else:
+                    print("No spacers generated (gaps below 4mm threshold)")
+
+            else:
+                # Generate single baseplate (original behavior)
+                if needs_split:
+                    print_warning("Proceeding with single oversized baseplate...")
                     print()
 
-            print_success(f"Generated baseplate: {result.baseplate_path}")
-            if result.spacer_path:
-                print_success(f"Generated spacers: {result.spacer_path}")
-            else:
-                print("No spacers generated (gaps below 4mm threshold)")
+                baseplate_path = (
+                    output_path.parent / f"{output_path.name}-baseplate.stl"
+                )
+                spacer_path = output_path.parent / f"{output_path.name}-spacers.stl"
+
+                result = generate_drawer_fit(width, depth, baseplate_path, spacer_path)
+
+                # Display calculation summary
+                _display_drawer_fit_summary(result, width, depth, MIN_SPACER_GAP_MM)
+
+                # Check spacer dimensions against print bed
+                if result.spacer_path:
+                    if width > PRINT_BED_WIDTH_MM or depth > PRINT_BED_DEPTH_MM:
+                        print_warning(
+                            f"Warning: Spacer dimensions may exceed print bed "
+                            f"({PRINT_BED_WIDTH_MM}x{PRINT_BED_DEPTH_MM}mm)"
+                        )
+                        print()
+
+                if needs_split:
+                    print_success(
+                        f"Generated baseplate: {result.baseplate_path} "
+                        f"(WARNING: exceeds print bed)"
+                    )
+                else:
+                    print_success(f"Generated baseplate: {result.baseplate_path}")
+
+                if result.spacer_path:
+                    print_success(f"Generated spacers: {result.spacer_path}")
+                else:
+                    print("No spacers generated (gaps below 4mm threshold)")
 
         except ValueError as e:
             print_error(f"Invalid dimensions: {e}")

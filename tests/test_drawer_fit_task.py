@@ -81,7 +81,9 @@ def test_drawer_fit_outputs_warning_for_oversized_baseplate(
 
     # Use dimensions that exceed max units (default 5x5)
     # 300mm / 42mm = 7 units, which exceeds MAX_GRIDFINITY_UNITS_X/Y (5)
-    drawer_fit(ctx, width=300.0, depth=300.0, output=output_path)
+    # Mock input() to decline split (answer "n")
+    with patch("builtins.input", return_value="n"):
+        drawer_fit(ctx, width=300.0, depth=300.0, output=output_path)
 
     captured = capsys.readouterr()
 

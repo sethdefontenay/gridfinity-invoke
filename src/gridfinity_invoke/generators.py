@@ -95,6 +95,98 @@ def generate_baseplate(
     return output_path
 
 
+def calculate_baseplate_splits(units_x: int, units_y: int) -> list[tuple[int, int]]:
+    """Calculate how to split an oversized baseplate into printable pieces.
+
+    For dimensions that exceed MAX_GRIDFINITY_UNITS, splits the baseplate into
+    a grid of smaller pieces. Each piece is at most MAX_GRIDFINITY_UNITS in
+    each dimension, with the final piece in each direction getting the remainder.
+
+    Args:
+        units_x: Total width in gridfinity units
+        units_y: Total depth in gridfinity units
+
+    Returns:
+        List of (width, depth) tuples for each piece. If no splitting needed,
+        returns a single-item list with the original dimensions.
+
+    Examples:
+        >>> calculate_baseplate_splits(12, 5)  # Max 5x5
+        [(5, 5), (5, 5), (2, 5)]  # 3 pieces in X direction
+
+        >>> calculate_baseplate_splits(12, 7)  # Max 5x5
+        [(5, 5), (5, 5), (2, 5), (5, 2), (5, 2), (2, 2)]  # 3x2 grid = 6 pieces
+    """
+    # Calculate how many pieces needed in each direction
+    num_pieces_x = (units_x + MAX_GRIDFINITY_UNITS_X - 1) // MAX_GRIDFINITY_UNITS_X
+    num_pieces_y = (units_y + MAX_GRIDFINITY_UNITS_Y - 1) // MAX_GRIDFINITY_UNITS_Y
+
+    # Build list of piece sizes for each direction
+    pieces_x = []
+    remaining_x = units_x
+    for _ in range(num_pieces_x):
+        piece_width = min(remaining_x, MAX_GRIDFINITY_UNITS_X)
+        pieces_x.append(piece_width)
+        remaining_x -= piece_width
+
+    pieces_y = []
+    remaining_y = units_y
+    for _ in range(num_pieces_y):
+        piece_depth = min(remaining_y, MAX_GRIDFINITY_UNITS_Y)
+        pieces_y.append(piece_depth)
+        remaining_y -= piece_depth
+
+    # Create grid of pieces (X pieces * Y pieces)
+    splits = []
+    for y_size in pieces_y:
+        for x_size in pieces_x:
+            splits.append((x_size, y_size))
+
+    return splits
+
+
+def generate_split_baseplates(
+    splits: list[tuple[int, int]], output_dir: Path, base_name: str
+) -> list[Path]:
+    """Generate multiple baseplate STL files from split calculations.
+
+    Creates numbered baseplate files for each piece in the split calculation.
+    Uses the naming pattern: {base_name}-1.stl, {base_name}-2.stl, etc.
+
+    Args:
+        splits: List of (width, depth) tuples for each piece from
+            calculate_baseplate_splits
+        output_dir: Directory to write the STL files
+        base_name: Base name for the files (e.g., "baseplate" or
+            "drawer-fit-530x247mm-baseplate")
+
+    Returns:
+        List of paths to the generated STL files
+
+    Examples:
+        >>> splits = [(5, 5), (5, 5), (2, 5)]
+        >>> paths = generate_split_baseplates(splits, Path("output"), "baseplate")
+        # Generates: baseplate-1.stl, baseplate-2.stl, baseplate-3.stl
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    result_paths = []
+
+    for i, (width, depth) in enumerate(splits, start=1):
+        # Generate numbered filename
+        output_path = output_dir / f"{base_name}-{i}.stl"
+
+        # Generate baseplate with these dimensions
+        baseplate = GridfinityBaseplate(width, depth)
+        result = baseplate.render()
+        result.val().exportStl(str(output_path))  # pyrefly: ignore[missing-attribute]
+
+        result_paths.append(output_path)
+
+    return result_paths
+
+
 def generate_drawer_fit(
     width_mm: float,
     depth_mm: float,
