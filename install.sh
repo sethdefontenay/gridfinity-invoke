@@ -5,11 +5,20 @@ set -e
 # Gridfinity Invoke Installation Script
 # ============================================================================
 # This script sets up the development environment for gridfinity-invoke:
+# - Clones the repo (if not already in it)
 # - Creates a Python virtual environment
 # - Installs project dependencies from pyproject.toml
 # - Runs lint checks to verify code quality
 # - Runs test suite to verify functionality
+#
+# Usage:
+#   curl -O https://raw.githubusercontent.com/sethdefontenay/gridfinity-invoke/master/install.sh
+#   chmod +x install.sh
+#   ./install.sh
 # ============================================================================
+
+REPO_URL="https://github.com/sethdefontenay/gridfinity-invoke.git"
+REPO_DIR="gridfinity-invoke"
 
 echo "=========================================="
 echo "Gridfinity Invoke - Installation Script"
@@ -29,6 +38,20 @@ fi
 
 echo "Using Python: $PYTHON_CMD ($(${PYTHON_CMD} --version))"
 echo ""
+
+# Check if we're already in the repo (pyproject.toml exists)
+if [ ! -f "pyproject.toml" ]; then
+    echo "Step 0: Cloning repository..."
+    if [ -d "$REPO_DIR" ]; then
+        echo "  Directory $REPO_DIR already exists. Using existing clone."
+        cd "$REPO_DIR"
+    else
+        git clone "$REPO_URL"
+        cd "$REPO_DIR"
+        echo "  Repository cloned successfully."
+    fi
+    echo ""
+fi
 
 # Step 1: Create virtual environment
 echo "Step 1/4: Creating virtual environment..."
