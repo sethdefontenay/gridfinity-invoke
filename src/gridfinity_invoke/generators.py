@@ -209,6 +209,10 @@ def generate_drawer_fit(
     generates the baseplate STL, and optionally generates spacers if
     the gap is large enough (>= 4mm).
 
+    Note: The spacer STL is a half-set containing one of each spacer piece
+    (corners, length fillers, width fillers) arranged for 3D printing. Print
+    the spacer file twice to get a complete set of spacers for the drawer.
+
     Args:
         width_mm: Drawer width (X dimension) in millimeters
         depth_mm: Drawer depth (Y dimension) in millimeters

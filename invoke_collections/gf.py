@@ -314,6 +314,7 @@ def drawer_fit(
 
                 if result.spacer_path:
                     print_success(f"Generated spacers: {result.spacer_path}")
+                    print("  (half-set - print twice for complete spacer set)")
                 else:
                     print("No spacers generated (gaps below 4mm threshold)")
 
@@ -366,6 +367,7 @@ def drawer_fit(
 
                 if result.spacer_path:
                     print_success(f"Generated spacers: {result.spacer_path}")
+                    print("  (half-set - print twice for complete spacer set)")
                 else:
                     print("No spacers generated (gaps below 4mm threshold)")
 
@@ -465,6 +467,7 @@ def drawer_fit(
 
                 if result.spacer_path:
                     print_success(f"Generated spacers: {result.spacer_path}")
+                    print("  (half-set - print twice for complete spacer set)")
                 else:
                     print("No spacers generated (gaps below 4mm threshold)")
 
@@ -506,6 +509,7 @@ def drawer_fit(
 
                 if result.spacer_path:
                     print_success(f"Generated spacers: {result.spacer_path}")
+                    print("  (half-set - print twice for complete spacer set)")
                 else:
                     print("No spacers generated (gaps below 4mm threshold)")
 
@@ -552,7 +556,7 @@ def _display_drawer_fit_summary(
         spacers_to_generate.append("front/back")
 
     if spacers_to_generate:
-        print(f"Spacers: {', '.join(spacers_to_generate)}")
+        print(f"Spacers: {', '.join(spacers_to_generate)} (half-set, print twice)")
     else:
         print("Spacers: none needed (gaps too small)")
 
