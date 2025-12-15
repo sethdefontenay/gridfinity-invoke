@@ -22,6 +22,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-cov",
+    "pytest-bdd",
     "mypy",
     "pre-commit",
     "pyrefly",
@@ -37,6 +38,7 @@ addopts = "--cov=src/gridfinity_invoke --cov-report=term-missing -p no:xdist"
 markers = [
     "serial: mark test to run serially (not in parallel)",
 ]
+bdd_features_base_dir = "tests/features/"
 
 [tool.ruff]
 line-length = 88
