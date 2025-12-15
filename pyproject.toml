@@ -23,6 +23,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-bdd",
+    "pytest-html",
     "mypy",
     "pre-commit",
     "pyrefly",

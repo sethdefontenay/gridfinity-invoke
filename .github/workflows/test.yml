@@ -28,21 +28,25 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest --junitxml=test-results.xml --cov=src/gridfinity_invoke --cov-report=xml --cov-report=term-missing
+          pytest --junitxml=test-results.xml --html=test-report.html --self-contained-html --cov=src/gridfinity_invoke --cov-report=xml --cov-report=html --cov-report=term-missing
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: test-results.xml
+          path: |
+            test-results.xml
+            test-report.html
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
-          path: coverage.xml
+          path: |
+            coverage.xml
+            htmlcov/
 
       - name: Test Summary
         uses: test-summary/action@v2
