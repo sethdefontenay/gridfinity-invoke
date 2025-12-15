@@ -4,10 +4,9 @@ import tempfile
 from pathlib import Path
 
 from gridfinity_invoke.generators import (
-    MAX_GRIDFINITY_UNITS_X,
-    MAX_GRIDFINITY_UNITS_Y,
     calculate_baseplate_splits,
     generate_split_baseplates,
+    get_max_units,
 )
 
 
@@ -115,15 +114,23 @@ def test_generate_split_baseplates_with_project_name() -> None:
         assert result_paths[1].name == "drawer-fit-530x247mm-baseplate-2.stl"
 
 
-def test_split_calculation_max_units_constants() -> None:
-    """Test that split calculation uses correct MAX_GRIDFINITY_UNITS constants."""
-    # Verify constants are as expected (5x5 for 225mm bed)
-    assert MAX_GRIDFINITY_UNITS_X == 5
-    assert MAX_GRIDFINITY_UNITS_Y == 5
+def test_get_max_units_returns_correct_values_for_default() -> None:
+    """Test that get_max_units returns correct values for default 225mm bed."""
+    # Default config should return 225mm bed (5x5 units)
+    max_x, max_y = get_max_units()
+
+    assert max_x == 5  # 225 // 42 = 5
+    assert max_y == 5  # 225 // 42 = 5
+
+
+def test_split_calculation_respects_max_units() -> None:
+    """Test that split calculation respects max units from configuration."""
+    # Get current max units
+    max_x, max_y = get_max_units()
 
     # Test that splits respect these constants
-    # 6 units should split into [5, 1]
+    # 6 units should split into [max_x, 1] if max_x=5
     splits = calculate_baseplate_splits(6, 1)
     assert len(splits) == 2
-    assert splits[0][0] == 5  # First piece width
+    assert splits[0][0] == max_x  # First piece width
     assert splits[1][0] == 1  # Second piece width (remainder)

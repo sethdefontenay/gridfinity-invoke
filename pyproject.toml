@@ -61,4 +61,4 @@ ignore_missing_imports = true
 [tool.pyrefly]
 project_includes = ["src"]
 python_version = "3.12"
-ignore-missing-imports = ["cqgridfinity", "cqgridfinity.*"]
+ignore-missing-imports = ["cqgridfinity", "cqgridfinity.*", "invoke_collections", "invoke_collections.*"]

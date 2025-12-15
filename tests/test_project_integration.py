@@ -40,7 +40,7 @@ def test_full_workflow_new_project_bins_baseplate_load(
     3. Adding a baseplate component
     4. Loading the project regenerates all STL files
     """
-    from tasks import baseplate, bin, load, new_project
+    from invoke_collections.gf import baseplate, bin, load, new_project
 
     ctx = MockContext()
     project_name = "full-workflow-test"
@@ -53,15 +53,15 @@ def test_full_workflow_new_project_bins_baseplate_load(
     assert projects.get_active_project() == project_name
 
     # Step 2: Add first bin component (2x2x3)
-    with patch("tasks.prompt_with_default", return_value="storage-bin"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="storage-bin"):
         bin(ctx, length=2, width=2, height=3)
 
     # Step 3: Add second bin component (1x1x4)
-    with patch("tasks.prompt_with_default", return_value="small-bin"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="small-bin"):
         bin(ctx, length=1, width=1, height=4)
 
     # Step 4: Add baseplate component (4x4)
-    with patch("tasks.prompt_with_default", return_value="main-base"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="main-base"):
         baseplate(ctx, length=4, width=4)
 
     # Verify all STL files exist
@@ -92,7 +92,7 @@ def test_full_workflow_new_project_bins_baseplate_load(
 
 def test_load_fails_for_nonexistent_project(temp_project_dir: Path) -> None:
     """Test load fails with error for non-existent project."""
-    from tasks import load
+    from invoke_collections.gf import load
 
     ctx = MockContext()
 
@@ -113,7 +113,7 @@ def test_config_persistence_across_multiple_operations(
     - Component data (type, dimensions) is preserved correctly
     - Multiple components of same type are tracked separately
     """
-    from tasks import baseplate, bin, new_project
+    from invoke_collections.gf import baseplate, bin, new_project
 
     ctx = MockContext()
     project_name = "persistence-test"
@@ -122,7 +122,7 @@ def test_config_persistence_across_multiple_operations(
     new_project(ctx, name=project_name)
 
     # Add first bin
-    with patch("tasks.prompt_with_default", return_value="bin-a"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="bin-a"):
         bin(ctx, length=2, width=3, height=4)
 
     # Verify config after first addition
@@ -135,7 +135,7 @@ def test_config_persistence_across_multiple_operations(
     assert config["components"][0]["height"] == 4
 
     # Add second bin
-    with patch("tasks.prompt_with_default", return_value="bin-b"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="bin-b"):
         bin(ctx, length=1, width=1, height=2)
 
     # Verify config after second addition
@@ -143,7 +143,7 @@ def test_config_persistence_across_multiple_operations(
     assert len(config["components"]) == 2
 
     # Add baseplate
-    with patch("tasks.prompt_with_default", return_value="plate"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="plate"):
         baseplate(ctx, length=5, width=5)
 
     # Verify final config

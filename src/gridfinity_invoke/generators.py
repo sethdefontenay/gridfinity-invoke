@@ -5,17 +5,23 @@ from typing import NamedTuple
 
 from cqgridfinity import GridfinityBaseplate, GridfinityBox, GridfinityDrawerSpacer
 
+from gridfinity_invoke.config import get_print_bed_dimensions
+
 # Gridfinity standard constants
 GRIDFINITY_UNIT_MM = 42  # 1 gridfinity unit = 42mm
 MIN_SPACER_GAP_MM = 4  # cqgridfinity threshold for spacer generation
 
-# Print bed configuration - edit these values for your printer
-PRINT_BED_WIDTH_MM = 225  # Default: Elegoo Neptune 4 Pro
-PRINT_BED_DEPTH_MM = 225  # Default: Elegoo Neptune 4 Pro
 
-# Derived constants (calculated from print bed size)
-MAX_GRIDFINITY_UNITS_X = PRINT_BED_WIDTH_MM // GRIDFINITY_UNIT_MM  # 5 units
-MAX_GRIDFINITY_UNITS_Y = PRINT_BED_DEPTH_MM // GRIDFINITY_UNIT_MM  # 5 units
+def get_max_units() -> tuple[int, int]:
+    """Get maximum gridfinity units that fit on the print bed.
+
+    Returns:
+        Tuple of (max_units_x, max_units_y) based on current printer configuration.
+    """
+    bed_width, bed_depth = get_print_bed_dimensions()
+    max_units_x = bed_width // GRIDFINITY_UNIT_MM
+    max_units_y = bed_depth // GRIDFINITY_UNIT_MM
+    return (max_units_x, max_units_y)
 
 
 class DrawerFitResult(NamedTuple):
@@ -98,9 +104,10 @@ def generate_baseplate(
 def calculate_baseplate_splits(units_x: int, units_y: int) -> list[tuple[int, int]]:
     """Calculate how to split an oversized baseplate into printable pieces.
 
-    For dimensions that exceed MAX_GRIDFINITY_UNITS, splits the baseplate into
-    a grid of smaller pieces. Each piece is at most MAX_GRIDFINITY_UNITS in
-    each dimension, with the final piece in each direction getting the remainder.
+    For dimensions that exceed the maximum printable units, splits the baseplate
+    into a grid of smaller pieces. Each piece is at most the maximum printable
+    units in each dimension, with the final piece in each direction getting the
+    remainder.
 
     Args:
         units_x: Total width in gridfinity units
@@ -117,22 +124,25 @@ def calculate_baseplate_splits(units_x: int, units_y: int) -> list[tuple[int, in
         >>> calculate_baseplate_splits(12, 7)  # Max 5x5
         [(5, 5), (5, 5), (2, 5), (5, 2), (5, 2), (2, 2)]  # 3x2 grid = 6 pieces
     """
+    # Get max units from current printer configuration
+    max_units_x, max_units_y = get_max_units()
+
     # Calculate how many pieces needed in each direction
-    num_pieces_x = (units_x + MAX_GRIDFINITY_UNITS_X - 1) // MAX_GRIDFINITY_UNITS_X
-    num_pieces_y = (units_y + MAX_GRIDFINITY_UNITS_Y - 1) // MAX_GRIDFINITY_UNITS_Y
+    num_pieces_x = (units_x + max_units_x - 1) // max_units_x
+    num_pieces_y = (units_y + max_units_y - 1) // max_units_y
 
     # Build list of piece sizes for each direction
     pieces_x = []
     remaining_x = units_x
     for _ in range(num_pieces_x):
-        piece_width = min(remaining_x, MAX_GRIDFINITY_UNITS_X)
+        piece_width = min(remaining_x, max_units_x)
         pieces_x.append(piece_width)
         remaining_x -= piece_width
 
     pieces_y = []
     remaining_y = units_y
     for _ in range(num_pieces_y):
-        piece_depth = min(remaining_y, MAX_GRIDFINITY_UNITS_Y)
+        piece_depth = min(remaining_y, max_units_y)
         pieces_y.append(piece_depth)
         remaining_y -= piece_depth
 

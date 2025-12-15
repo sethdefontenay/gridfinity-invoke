@@ -45,6 +45,8 @@ def test_pyrefly_can_typecheck_source_directory() -> None:
     )
     # Exit code 0 means no type errors
     # We want to verify pyrefly runs without config errors
+    # Note: invoke_collections is not checked here as it has cross-module
+    # imports that pyrefly struggles with
     assert result.returncode == 0, (
         f"Pyrefly failed (exit code {result.returncode}):\n"
         f"stdout: {result.stdout}\n"

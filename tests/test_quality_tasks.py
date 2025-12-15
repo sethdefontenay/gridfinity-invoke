@@ -6,7 +6,7 @@ import subprocess
 def test_lint_task_runs_ruff_and_returns_exit_code() -> None:
     """Test that lint task runs ruff and returns appropriate exit code."""
     result = subprocess.run(
-        ["invoke", "lint"],
+        ["invoke", "dev.lint"],
         capture_output=True,
         text=True,
     )
@@ -22,7 +22,7 @@ def test_lint_task_runs_ruff_and_returns_exit_code() -> None:
 def test_format_task_check_flag_returns_appropriate_exit_code() -> None:
     """Test that format task with --check flag validates without modifying files."""
     result = subprocess.run(
-        ["invoke", "format", "--check"],
+        ["invoke", "dev.format", "--check"],
         capture_output=True,
         text=True,
     )

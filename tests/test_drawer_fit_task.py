@@ -1,5 +1,6 @@
 """Tests for drawer-fit invoke task."""
 
+import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -7,7 +8,7 @@ from unittest.mock import patch
 import pytest
 from invoke import MockContext
 
-from gridfinity_invoke import projects
+from gridfinity_invoke import config, projects
 
 
 @pytest.fixture
@@ -18,9 +19,21 @@ def temp_output_dir():
         # Create isolated project state (no active project)
         active_file = tmpdir_path / ".gridfinity-active"
         projects_dir = tmpdir_path / "projects"
+        config_file = tmpdir_path / ".gf-config"
+        # Create default config file to avoid prompting
+        config_file.write_text(
+            json.dumps(
+                {
+                    "print_bed_width_mm": 225,
+                    "print_bed_depth_mm": 225,
+                },
+                indent=2,
+            )
+        )
         with patch.object(projects, "PROJECTS_DIR", projects_dir):
             with patch.object(projects, "ACTIVE_FILE", active_file):
-                yield tmpdir_path
+                with patch.object(config, "CONFIG_FILE", config_file):
+                    yield tmpdir_path
 
 
 @pytest.fixture
@@ -30,14 +43,26 @@ def temp_project_dir():
         tmpdir_path = Path(tmpdir)
         active_file = tmpdir_path / ".gridfinity-active"
         projects_dir = tmpdir_path / "projects"
+        config_file = tmpdir_path / ".gf-config"
+        # Create default config file to avoid prompting
+        config_file.write_text(
+            json.dumps(
+                {
+                    "print_bed_width_mm": 225,
+                    "print_bed_depth_mm": 225,
+                },
+                indent=2,
+            )
+        )
         with patch.object(projects, "PROJECTS_DIR", projects_dir):
             with patch.object(projects, "ACTIVE_FILE", active_file):
-                yield tmpdir_path
+                with patch.object(config, "CONFIG_FILE", config_file):
+                    yield tmpdir_path
 
 
 def test_drawer_fit_accepts_width_and_depth_parameters(temp_output_dir: Path) -> None:
     """Test task accepts --width and --depth parameters."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")
@@ -53,7 +78,7 @@ def test_drawer_fit_displays_calculation_summary(
     temp_output_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test task displays calculation summary."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")
@@ -74,7 +99,7 @@ def test_drawer_fit_outputs_warning_for_oversized_baseplate(
     temp_output_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test task outputs warning when baseplate exceeds max units."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")
@@ -95,7 +120,7 @@ def test_drawer_fit_outputs_warning_for_oversized_baseplate(
 
 def test_drawer_fit_generates_stl_files(temp_output_dir: Path) -> None:
     """Test task generates both STL files in correct location."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")
@@ -113,7 +138,7 @@ def test_drawer_fit_fails_for_invalid_dimensions(
     temp_output_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test task fails with error for invalid dimensions (< 42mm)."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")
@@ -131,7 +156,7 @@ def test_drawer_fit_fails_for_negative_dimensions(
     temp_output_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test task fails with error for negative dimensions."""
-    from tasks import drawer_fit
+    from invoke_collections.gf import drawer_fit
 
     ctx = MockContext()
     output_path = str(temp_output_dir / "drawer-fit")

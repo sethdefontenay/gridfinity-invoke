@@ -26,7 +26,8 @@ def test_bin_with_active_project_suggests_default_name(
     temp_project_dir: Path,
 ) -> None:
     """Test bin with active project suggests default name like bin-2x2x3."""
-    from tasks import new_project, prompt_with_default
+    from invoke_collections.gf import new_project
+    from invoke_collections.helpers import prompt_with_default
 
     ctx = MockContext()
     project_name = "test-project"
@@ -50,7 +51,7 @@ def test_bin_saves_to_project_directory_and_updates_config(
     temp_project_dir: Path,
 ) -> None:
     """Test bin saves to project directory and updates config."""
-    from tasks import bin, new_project
+    from invoke_collections.gf import bin, new_project
 
     ctx = MockContext()
     project_name = "bin-project"
@@ -59,7 +60,7 @@ def test_bin_saves_to_project_directory_and_updates_config(
     new_project(ctx, name=project_name)
 
     # Mock user input to accept default name
-    with patch("tasks.prompt_with_default", return_value="bin-2x2x3"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="bin-2x2x3"):
         bin(ctx, length=2, width=2, height=3)
 
     # Verify STL was saved to project directory
@@ -82,7 +83,7 @@ def test_bin_without_active_project_uses_default_behavior(
     temp_project_dir: Path,
 ) -> None:
     """Test bin without active project uses existing output/ behavior."""
-    from tasks import bin
+    from invoke_collections.gf import bin
 
     ctx = MockContext()
 
@@ -104,7 +105,8 @@ def test_baseplate_with_active_project_suggests_default_name(
     temp_project_dir: Path,
 ) -> None:
     """Test baseplate with active project suggests default name like baseplate-4x4."""
-    from tasks import new_project, prompt_with_default
+    from invoke_collections.gf import new_project
+    from invoke_collections.helpers import prompt_with_default
 
     ctx = MockContext()
     project_name = "baseplate-test-project"
@@ -128,7 +130,7 @@ def test_baseplate_saves_to_project_directory_and_updates_config(
     temp_project_dir: Path,
 ) -> None:
     """Test baseplate saves to project directory and updates config."""
-    from tasks import baseplate, new_project
+    from invoke_collections.gf import baseplate, new_project
 
     ctx = MockContext()
     project_name = "baseplate-project"
@@ -137,7 +139,9 @@ def test_baseplate_saves_to_project_directory_and_updates_config(
     new_project(ctx, name=project_name)
 
     # Mock user input to accept default name
-    with patch("tasks.prompt_with_default", return_value="baseplate-4x4"):
+    with patch(
+        "invoke_collections.gf.prompt_with_default", return_value="baseplate-4x4"
+    ):
         baseplate(ctx, length=4, width=4)
 
     # Verify STL was saved to project directory
@@ -157,7 +161,7 @@ def test_baseplate_saves_to_project_directory_and_updates_config(
 
 def test_component_name_deduplication_in_config(temp_project_dir: Path) -> None:
     """Test component name deduplication in config when same name used twice."""
-    from tasks import bin, new_project
+    from invoke_collections.gf import bin, new_project
 
     ctx = MockContext()
     project_name = "dedup-project"
@@ -166,11 +170,11 @@ def test_component_name_deduplication_in_config(temp_project_dir: Path) -> None:
     new_project(ctx, name=project_name)
 
     # Add first bin with custom name
-    with patch("tasks.prompt_with_default", return_value="my-bin"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="my-bin"):
         bin(ctx, length=1, width=1, height=1)
 
     # Add second bin with same name but different dimensions
-    with patch("tasks.prompt_with_default", return_value="my-bin"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="my-bin"):
         bin(ctx, length=2, width=2, height=2)
 
     # Verify config has only one component (deduplicated)

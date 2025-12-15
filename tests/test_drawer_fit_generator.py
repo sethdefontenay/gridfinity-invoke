@@ -7,12 +7,9 @@ import pytest
 
 from gridfinity_invoke.generators import (
     GRIDFINITY_UNIT_MM,
-    MAX_GRIDFINITY_UNITS_X,
-    MAX_GRIDFINITY_UNITS_Y,
     MIN_SPACER_GAP_MM,
-    PRINT_BED_DEPTH_MM,
-    PRINT_BED_WIDTH_MM,
     generate_drawer_fit,
+    get_max_units,
 )
 
 
@@ -96,16 +93,25 @@ def test_baseplate_stl_file_created() -> None:
         assert result.baseplate_path.stat().st_size > 0
 
 
-def test_print_bed_config_constants() -> None:
-    """Test print bed configuration constants are defined correctly."""
-    # Default values for Elegoo Neptune 4 Pro
-    assert PRINT_BED_WIDTH_MM == 225
-    assert PRINT_BED_DEPTH_MM == 225
+def test_dynamic_max_units_function() -> None:
+    """Test get_max_units function returns configuration-based values."""
+    # Get max units from current configuration
+    max_x, max_y = get_max_units()
 
-    # Derived constants calculated correctly
-    assert MAX_GRIDFINITY_UNITS_X == 225 // 42  # 5 units
-    assert MAX_GRIDFINITY_UNITS_Y == 225 // 42  # 5 units
+    # Both should be positive integers
+    assert isinstance(max_x, int)
+    assert isinstance(max_y, int)
+    assert max_x > 0
+    assert max_y > 0
 
-    # Gridfinity constants
+    # Should match calculation: bed_size // 42
+    # Default config is 225mm, so 225 // 42 = 5
+    assert max_x >= 1  # At least 1 unit should fit
+    assert max_y >= 1
+
+
+def test_gridfinity_constants_unchanged() -> None:
+    """Test that gridfinity standard constants remain fixed."""
+    # These should never change - they're part of the Gridfinity standard
     assert GRIDFINITY_UNIT_MM == 42
     assert MIN_SPACER_GAP_MM == 4

@@ -4,6 +4,7 @@ These tests verify end-to-end workflows and critical integration points
 for the drawer-fit feature.
 """
 
+import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -11,7 +12,7 @@ from unittest.mock import patch
 import pytest
 from invoke import MockContext
 
-from gridfinity_invoke import projects
+from gridfinity_invoke import config, projects
 
 
 @pytest.fixture
@@ -21,9 +22,21 @@ def isolated_project_env():
         tmpdir_path = Path(tmpdir)
         active_file = tmpdir_path / ".gridfinity-active"
         projects_dir = tmpdir_path / "projects"
+        config_file = tmpdir_path / ".gf-config"
+        # Create default config file to avoid prompting
+        config_file.write_text(
+            json.dumps(
+                {
+                    "print_bed_width_mm": 225,
+                    "print_bed_depth_mm": 225,
+                },
+                indent=2,
+            )
+        )
         with patch.object(projects, "PROJECTS_DIR", projects_dir):
             with patch.object(projects, "ACTIVE_FILE", active_file):
-                yield tmpdir_path
+                with patch.object(config, "CONFIG_FILE", config_file):
+                    yield tmpdir_path
 
 
 def test_exactly_42mm_produces_1x1_baseplate(isolated_project_env: Path) -> None:
@@ -53,7 +66,7 @@ def test_project_workflow_drawer_fit_then_load_regenerates(
     isolated_project_env: Path,
 ) -> None:
     """Test project workflow: new-project -> drawer-fit -> load regenerates."""
-    from tasks import drawer_fit, load, new_project
+    from invoke_collections.gf import drawer_fit, load, new_project
 
     ctx = MockContext()
     project_name = "load-test-project"
@@ -62,7 +75,7 @@ def test_project_workflow_drawer_fit_then_load_regenerates(
     new_project(ctx, name=project_name)
 
     # Step 2: Add drawer-fit component
-    with patch("tasks.prompt_with_default", return_value="my-drawer"):
+    with patch("invoke_collections.gf.prompt_with_default", return_value="my-drawer"):
         drawer_fit(ctx, width=200.0, depth=150.0)
 
     # Verify files were created

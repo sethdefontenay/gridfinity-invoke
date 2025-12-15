@@ -7,7 +7,7 @@
 5. [ ] GitHub Integration — Add invoke tasks to initialize git repo, commit changes, and push projects to GitHub with meaningful commit messages `S`
 6. [ ] Baseplate Generation Task — Add invoke task to generate Gridfinity baseplates with configurable grid dimensions `S`
 7. [ ] Custom Task Template — Create a template/example for adding custom invoke tasks, with documentation on extending the tool `XS`
-8. [ ] Setup/Install Script — Create invoke task or shell script for easy installation on new systems (dependencies, git clone, virtual environment) `S`
+8. [x] Setup/Install Script — Create invoke task or shell script for easy installation on new systems (dependencies, git clone, virtual environment) `S`
 9. [ ] Batch Generation — Add capability to generate multiple components from a single config file or command `M`
 10. [ ] Divider/Insert Generation — Add invoke tasks for generating bin dividers, label holders, or other Gridfinity accessories `M`
 11. [ ] Configuration Profiles — Support named configuration profiles for frequently used bin sizes or project templates `S`

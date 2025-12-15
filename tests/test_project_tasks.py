@@ -25,7 +25,7 @@ def temp_project_dir():
 
 def test_new_project_creates_directory_and_config(temp_project_dir: Path) -> None:
     """Test new-project creates directory and config.json with correct structure."""
-    from tasks import new_project
+    from invoke_collections.gf import new_project
 
     ctx = MockContext()
     project_name = "test-project"
@@ -48,7 +48,7 @@ def test_new_project_creates_directory_and_config(temp_project_dir: Path) -> Non
 
 def test_new_project_sets_project_as_active(temp_project_dir: Path) -> None:
     """Test new-project sets the newly created project as active."""
-    from tasks import new_project
+    from invoke_collections.gf import new_project
 
     ctx = MockContext()
     project_name = "active-test-project"
@@ -62,7 +62,7 @@ def test_new_project_sets_project_as_active(temp_project_dir: Path) -> None:
 
 def test_new_project_fails_if_project_exists(temp_project_dir: Path) -> None:
     """Test new-project fails with error if project already exists."""
-    from tasks import new_project
+    from invoke_collections.gf import new_project
 
     ctx = MockContext()
     project_name = "duplicate-project"
@@ -79,7 +79,7 @@ def test_new_project_fails_if_project_exists(temp_project_dir: Path) -> None:
 
 def test_load_regenerates_stl_files_from_config(temp_project_dir: Path) -> None:
     """Test load regenerates all STL files from config."""
-    from tasks import load, new_project
+    from invoke_collections.gf import load, new_project
 
     ctx = MockContext()
     project_name = "load-test-project"
@@ -118,7 +118,7 @@ def test_list_projects_shows_projects_with_active_indicator(
     temp_project_dir: Path, capsys: pytest.CaptureFixture
 ) -> None:
     """Test list-projects shows all projects with active indicator."""
-    from tasks import list_projects, new_project
+    from invoke_collections.gf import list_projects, new_project
 
     ctx = MockContext()
 
@@ -143,7 +143,7 @@ def test_list_projects_shows_no_projects_when_empty(
     temp_project_dir: Path, capsys: pytest.CaptureFixture
 ) -> None:
     """Test list-projects shows 'No projects found' when empty."""
-    from tasks import list_projects
+    from invoke_collections.gf import list_projects
 
     ctx = MockContext()
 
