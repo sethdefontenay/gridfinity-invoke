@@ -1,5 +1,7 @@
 # gridfinity-invoke
 
+![Tests](https://github.com/sethdefontenay/gridfinity-invoke/actions/workflows/test.yml/badge.svg)
+
 A CLI tool for generating Gridfinity storage components as STL files. Built on top of [cqgridfinity](https://github.com/michaelgale/cq-gridfinity) and [Invoke](https://www.pyinvoke.org/).
 
 If you've got a drawer full of random stuff and want to organize it with 3D-printed Gridfinity bins, this tool helps you generate the STL files without writing any code.
